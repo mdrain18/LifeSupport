@@ -1,12 +1,15 @@
 ﻿using RimWorld;
 using Verse;
 
-namespace LifeSupport {
+namespace LifeSupport.Classes
+{
     [DefOf]
-    public static class LifeSupportDefOf {
-        public static HediffDef QE_LifeSupport;
+    public static class LifeSupportDefOf
+    {
+        public static HediffDef QeLifeSupport;
 
-        static LifeSupportDefOf() {
+        static LifeSupportDefOf()
+        {
             DefOfHelper.EnsureInitializedInCtor(typeof(LifeSupportDefOf));
         }
     }

@@ -1,23 +1,26 @@
-﻿using Verse;
-using RimWorld;
-using Verse.AI;
-using HarmonyLib;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using HarmonyLib;
+using RimWorld;
+using Verse;
+using Verse.AI;
 using static Verse.PawnCapacityUtility;
 
-namespace LifeSupport {
+namespace LifeSupport.Classes
+{
     [StaticConstructorOnStartup]
-    public static class HarmonyPatches {
-        internal static Type Hediff_DeathRattle = null;
+    public static class HarmonyPatches
+    {
+        internal static readonly Type HediffDeathRattle;
 
-        static HarmonyPatches() {
+        static HarmonyPatches()
+        {
             //Harmony
             var harmony = new Harmony("LifeSupport");
 
             harmony.Patch(
                 AccessTools.Method(typeof(Pawn_HealthTracker), "ShouldBeDeadFromRequiredCapacity"),
-                prefix: new HarmonyMethod(typeof(HarmonyPatches).GetMethod(nameof(Patch_ShouldBeDeadFromRequiredCapacity)))
+                new HarmonyMethod(typeof(HarmonyPatches).GetMethod(nameof(Patch_ShouldBeDeadFromRequiredCapacity)))
             );
 
             harmony.Patch(
@@ -27,75 +30,69 @@ namespace LifeSupport {
 
             harmony.Patch(
                 AccessTools.Method(typeof(PawnCapacityUtility), "CalculateLimbEfficiency"),
-                prefix: new HarmonyMethod(typeof(HarmonyPatches).GetMethod(nameof(Patch_CalculateLimbEfficiency)))
+                new HarmonyMethod(typeof(HarmonyPatches).GetMethod(nameof(Patch_CalculateLimbEfficiency)))
             );
 
-            Hediff_DeathRattle = AccessTools.TypeByName("DeathRattle.Hediff_DeathRattle");
-            if (!(Hediff_DeathRattle is null)) {
-                Log.Message("[LifeSupport] found DeathRattle");
-            }
+            HediffDeathRattle = AccessTools.TypeByName("DeathRattle.Hediff_DeathRattle");
+            if (!(HediffDeathRattle is null)) Log.Message("[LifeSupport] found DeathRattle");
         }
 
-        public static bool Patch_ShouldBeDeadFromRequiredCapacity(ref Pawn_HealthTracker __instance, ref PawnCapacityDef __result) {
+        public static bool Patch_ShouldBeDeadFromRequiredCapacity(ref Pawn_HealthTracker instance,
+            ref PawnCapacityDef result)
+        {
             // Check if consciousness is there. If it is then its okay.
 
-            Pawn_HealthTracker health = __instance;
-            Pawn pawn = health.hediffSet.pawn;
+            var health = instance;
+            var pawn = health.hediffSet.pawn;
 
-            if (!health.hediffSet.HasHediff(LifeSupportDefOf.QE_LifeSupport)) {
-                // not on life support
+            if (!health.hediffSet.HasHediff(LifeSupportDefOf.QeLifeSupport)) // not on life support
                 return true;
-            } else if (!pawn.ValidLifeSupportNearby()) {
-                // life support is unpowered
+            if (!pawn.ValidLifeSupportNearby()) // life support is unpowered
                 return true;
-            } else if (!health.capacities.CapableOf(PawnCapacityDefOf.Consciousness)) {
-                // no consciousness
+            if (!health.capacities.CapableOf(PawnCapacityDefOf.Consciousness)) // no consciousness
                 return true;
-            }
 
-            __result = null;
+            result = null;
             return false;
         }
 
-        public static void Patch_LayDown(ref Toil __result) {
-            bool debug = false;
-            if (debug) Log.Message("Patch_LayDown");
-            Toil toil = __result;
+        public static void Patch_LayDown(ref Toil result)
+        {
+            var toil = result;
             if (toil == null)
                 return;
 
-            toil.AddPreTickAction(delegate () {
-                Pawn pawn = toil.actor;
-                if (pawn is null || pawn.Dead) {
-                    return;
-                }
+            toil.AddPreTickAction(delegate
+            {
+                var pawn = toil.actor;
+                if (pawn is null || pawn.Dead) return;
 
                 pawn.SetHediffs();
             });
         }
 
-        public static bool Patch_CalculateLimbEfficiency(ref float __result, HediffSet diffSet, BodyPartTagDef limbCoreTag, BodyPartTagDef limbSegmentTag,
-                BodyPartTagDef limbDigitTag, float appendageWeight, out float functionalPercentage, List<CapacityImpactor> impactors) {
+        public static bool Patch_CalculateLimbEfficiency(ref float result, HediffSet diffSet,
+            BodyPartTagDef limbCoreTag, BodyPartTagDef limbSegmentTag,
+            BodyPartTagDef limbDigitTag, float appendageWeight, out float functionalPercentage,
+            List<CapacityImpactor> impactors)
+        {
             functionalPercentage = 0f;
 
-            if (limbCoreTag != BodyPartTagDefOf.MovingLimbCore) {
-                return true;
-            }
+            if (limbCoreTag != BodyPartTagDefOf.MovingLimbCore) return true;
 
-            var hediff = diffSet.GetFirstHediffOfDef(LifeSupportDefOf.QE_LifeSupport);
-            if (hediff is null) {
-                return true;
-            }
-            
-            if (hediff.Severity < 1f) {
-                return true;
-            }
+            var hediff = diffSet.GetFirstHediffOfDef(LifeSupportDefOf.QeLifeSupport);
+            if (hediff is null) return true;
 
-            __result = 0f;
+            if (hediff.Severity < 1f) return true;
 
-            if (!(impactors is null)) {
-                var capacityImpactor = new CapacityImpactorHediff();
-                capacityImpactor.hediff = hediff;
+            result = 0f;
+
+            if (!(impactors is null))
+            {
+                var capacityImpactor = new CapacityImpactorHediff
+                {
+                    hediff = hediff
+                };
                 impactors.Add(capacityImpactor);
             }
 
